@@ -124,7 +124,36 @@ var uiController = (function(){
         expenseLabel:'.budget__expenses--value',
         percentageLabel:'.budget__expenses--percentage',
         container:'.container',
-        expensesPercentLabel: '.item__percentage'
+        expensesPercentLabel: '.item__percentage',
+        dateLabel: '.budget__title--month'
+    }
+    var formatNumber = function(number, type){
+
+        var numSplit,int,dec;
+
+        var number = Math.abs( number );
+        number = number.toFixed(2);
+
+        numSplit = number.split( '.' );
+
+        int = numSplit[0];
+        dec = numSplit[1];
+
+        if( int.length > 3 ){
+            int = int.substr(0,int.length - 3) + ',' + int.substr(int.length - 3, int.length);
+        }
+
+        
+
+        return (type === 'expense'? '-':'+') + ' ' + int + '.' + dec;
+
+    }
+
+    
+    var nodeListForEach = function( nodeList, cf){
+        for ( var i = 0; i< nodeList.length ; i++){
+            cf(nodeList[i],i);
+        }
     }
 
     return {
@@ -139,15 +168,15 @@ var uiController = (function(){
         var html, newHTML, element;    
         if( type === 'income'){
             element = DOMStrings.incomeContainer;
-            html = '<div class="item clearfix" id="income-%id%"><div class="item__description">%description%</div><div class="right clearfix"><div class="item__value">+ %value%</div><div class="item__delete"><button class="item__delete--btn"><i class="ion-ios-close-outline"></i></button></div>'
+            html = '<div class="item clearfix" id="income-%id%"><div class="item__description">%description%</div><div class="right clearfix"><div class="item__value">%value%</div><div class="item__delete"><button class="item__delete--btn"><i class="ion-ios-close-outline"></i></button></div>'
 
         }
         else {
             element = DOMStrings.expenseContainer;
-            html = '<div class="item clearfix" id="expense-%id%"><div class="item__description">%description%</div><div class="right clearfix"><div class="item__value">- %value%</div><div class="item__percentage">21%</div><div class="item__delete"><button class="item__delete--btn"><i class="ion-ios-close-outline"></i></button></div></div></div>'
+            html = '<div class="item clearfix" id="expense-%id%"><div class="item__description">%description%</div><div class="right clearfix"><div class="item__value">%value%</div><div class="item__percentage">21%</div><div class="item__delete"><button class="item__delete--btn"><i class="ion-ios-close-outline"></i></button></div></div></div>'
         }
 
-        newHTML = html.replace('%id%',obj.id).replace('%description%',obj.description).replace('%value%',obj.value);
+        newHTML = html.replace('%id%',obj.id).replace('%description%',obj.description).replace('%value%',formatNumber(obj.value, type) );
 
         document.querySelector(element).insertAdjacentHTML('beforeend', newHTML);
 
@@ -165,11 +194,11 @@ var uiController = (function(){
             fieldsArr[0].focus();
         },  
         displayBudget: function( budget ){
-            document.querySelector( DOMStrings.budgetLabel ).textContent = budget.budget;
+            document.querySelector( DOMStrings.budgetLabel ).textContent = formatNumber(budget.budget,budget.budget>0?'income':'expense');
             
-            document.querySelector( DOMStrings.incomeLabel ).textContent = '+ '  + budget.totalIncome;
+            document.querySelector( DOMStrings.incomeLabel ).textContent = formatNumber(budget.totalIncome, 'income');
             
-            document.querySelector( DOMStrings.expenseLabel ).textContent = '- ' + budget.totalExpense;
+            document.querySelector( DOMStrings.expenseLabel ).textContent = formatNumber(budget.totalExpense,'expense');
             if( budget.percentage > 0){
                 document.querySelector( DOMStrings.percentageLabel ).textContent = budget.percentage + '%';
             }
@@ -184,11 +213,6 @@ var uiController = (function(){
             var fields;
             fields = document.querySelectorAll(DOMStrings.expensesPercentLabel);
 
-            var nodeListForEach = function( nodeList, cf){
-                for ( var i = 0; i< nodeList.length ; i++){
-                    cf(nodeList[i],i);
-                }
-            }
 
             nodeListForEach( fields, function(el,index){
                 if( percentages[index] > 0){
@@ -197,6 +221,29 @@ var uiController = (function(){
                     el.textContent = '---';
                 }
             });
+        },
+        displayMonth:function(){
+            var now, year,month, months; 
+            now = new Date();
+            
+            year = now.getFullYear();
+            month = now.getMonth();
+            months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
+
+            document.querySelector( DOMStrings.dateLabel ).textContent = months[month] + ' ' + year;
+        },
+        changeType: function(){
+            var fields = document.querySelectorAll( DOMStrings.inputType + ',' +
+                                                    DOMStrings.inputDescription + ','+
+                                                    DOMStrings.inputValue);
+
+            nodeListForEach( fields, function(cur){
+                cur.classList.toggle('red-focus');
+            });
+
+            document.querySelector(DOMStrings.inputBtn).classList.toggle('red');
+
         },
         getDOMStrings: function(){
             return DOMStrings;
@@ -220,6 +267,8 @@ var controller = ( function(budgetCtrl, uiCtrl) {
         });
 
         document.querySelector(DOM.container).addEventListener('click', ctrlDeleteItem );
+
+        document.querySelector(DOM.inputType).addEventListener('change', uiCtrl.changeType)
     };
 
 
@@ -278,6 +327,7 @@ var controller = ( function(budgetCtrl, uiCtrl) {
     return {
         init: function(){
             setupEventListeners();
+            uiCtrl.displayMonth();
             uiCtrl.displayBudget({budget:0,totalIncome:0,totalExpense:0,percentage:-1});
         }
     }
